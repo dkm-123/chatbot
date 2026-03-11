@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Handicraft Chatbot</title>
+  <style>
+    /* ---------- Your existing styles (unchanged) ---------- */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: url("{{ url_for('static', filename='inner3.jpg') }}") no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {   
+      border-radius: 30px;
+      padding: 20px;
+      width: 1200px;
+      background: url("{{ url_for('static', filename='inner2.jpg') }}") no-repeat center center fixed;
+      background-size: cover;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      color: #120c0c;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    #chatbox {
+      height: 320px;
+      overflow-y: auto;
+      background: rgb(233, 232, 196);
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      animation: fadeIn 0.25s ease;
+      word-wrap: break-word;
+      line-height: 1.4;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+    .user {
+      background: #d1e7ff;
+      align-self: flex-end;
+      border-bottom-right-radius: 6px;
+    }
+
+    .bot {
+      background: #e6ffe6;
+      align-self: flex-start;
+      border-bottom-left-radius: 6px;
+    }
+
+    /* separate style for follow-up cloud */
+    .bot.followup {
+      background: linear-gradient(90deg, #fff7e6, #fff3cc);
+      border: 1px solid rgba(0,0,0,0.04);
+      font-style: italic;
+      cursor: pointer;
+      align-self: flex-start;
+      max-width: 65%;
+    }
+
+    .bot .main-content { white-space: pre-wrap; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .input-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 15px;
+      border-radius: 25px;
+      border: 1px solid #ffd6ff;
+      outline: none;
+    }
+
+    button {
+      border: none;
+      padding: 12px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      color: #333;
+      transition: 0.2s;
+    }
+
+    button:hover { opacity: 0.95; transform: translateY(-1px); }
+
+    .voice-btn {
+      background: linear-gradient(135deg, #f6d365, #e07645c1);
+      color: white;
+    }
+
+    .mic-btn {
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+    }
+
+    .language-container {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      padding: 10px 15px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #d4fc79, #96e6a1);
+      text-align: center;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    #languageSelect {
+      margin-top: 5px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    /* ---------- New: responsive suggestion bar ---------- */
+    .suggestions {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 6px;
+      margin-bottom: 12px;
+      scrollbar-width: thin;
+    }
+
+    .suggestion-pill {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.06);
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform .12s, box-shadow .12s;
+    }
+
+    .suggestion-pill:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.06); }
+
+    /* Responsive tweaks */
+    @media (max-width: 1100px) {
+      .chat-container { width: 90%; padding: 16px; }
+      #chatbox { height: 48vh; }
+      .message { max-width: 85%; }
+    }
+
+    @media (max-width: 520px) {
+      .chat-container { width: 96%; padding: 12px; border-radius: 16px; }
+      h2 { font-size: 18px; }
+      button { padding: 10px 12px; font-size: 14px; }
+      #userInput { font-size: 14px; }
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Top-right language selector -->
+  <div class="language-container">
+     <label for="languageSelect" style="display:block; margin-bottom:5px; font-weight:bold; color:#222;">
+     Select Language
+  </label>
+
+    <select id="languageSelect" onchange="updateLanguage()">
+      <option value="en" data-lang="en-US">English</option>
+      <option value="hi" data-lang="hi-IN">Hindi</option>
+      <option value="es" data-lang="es-ES">Spanish</option>
+      <option value="fr" data-lang="fr-FR">French</option>
+      <option value="ar" data-lang="ar-SA">Arabic</option>
+      <option value="bn" data-lang="bn-IN">Bengali</option>
+      <option value="pt" data-lang="pt-BR">Portuguese</option>
+      <option value="ru" data-lang="ru-RU">Russian</option>
+      <option value="ja" data-lang="ja-JP">Japanese</option>
+      <option value="de" data-lang="de-DE">German</option>
+      <option value="ur" data-lang="ur-PK">Urdu</option>
+      <option value="id" data-lang="id-ID">Indonesian</option>
+      <option value="tr" data-lang="tr-TR">Turkish</option>
+      <option value="ta" data-lang="ta-IN">Tamil</option>
+    </select>
+  </div>
+
+  <div class="chat-container">
+    <h2 id="title">🦚 𝑪𝒓𝒂𝒇𝒕𝑺𝒆𝒆𝒌 𝑨𝒔𝒔𝒊𝒔𝒕𝒂𝒏𝒕</h2>
+
+    <!-- ---------- Suggestion bar (responsive) ---------- -->
+    <div class="suggestions" id="suggestionsBar" aria-label="suggestions">
+      <!-- pills will be inserted dynamically -->
+    </div>
+
+    <div id="chatbox"></div>
+
+    <div class="input-container">
+      <button class="voice-btn" onclick="playVoice()">🔊</button>
+      <input type="text" id="userInput" placeholder="Ask about an Art & Craft...">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+      <button class="mic-btn" onclick="startListening()">🎙</button>
+    </div>
+  </div>
+
+  <script>
+  const translations = {
+    en: { title: "🦚 CraftSeek Assistant", placeholder: "Ask about an Art & Craft...", send: "Send" },
+    hi: { title: "🦚 शिल्प सहायक", placeholder: "कला और शिल्प के बारे में पूछें...", send: "भेजें" },
+    es: { title: "🦚 Asistente de Artesanía", placeholder: "Pregunta sobre arte y artesanía...", send: "Enviar" },
+    fr: { title: "🦚 Assistant Artisanat", placeholder: "Demander sur l'Art & Artisanat...", send: "Envoyer" },
+    ar: { title: "🦚 مساعد الحرف اليدوية", placeholder: "اسأل عن الفن والحرف...", send: "إرسال" },
+    bn: { title: "🦚 হস্তশিল্প সহায়ক", placeholder: "শিল্প ও হস্তশিল্প সম্পর্কে জিজ্ঞাসা করুন...", send: "পাঠান" },
+    pt: { title: "🦚 Assistente de Artesanato", placeholder: "Pergunte sobre arte e artesanato...", send: "Enviar" },
+    ru: { title: "🦚 Помощник по ремеслам", placeholder: "Спросите об искусстве и ремесле...", send: "Отправить" },
+    ja: { title: "🦚 クラフトアシスタント", placeholder: "アート＆クラフトについて質問...", send: "送信" },
+    de: { title: "🦚 Handwerksassistent", placeholder: "Fragen Sie nach Kunst & Handwerk...", send: "Senden" },
+    ur: { title: "🦚 دستکاری معاون", placeholder: "فن اور دستکاری کے بارے میں پوچھیں...", send: "بھیجیں" },
+    id: { title: "🦚 Asisten Kerajinan", placeholder: "Tanyakan tentang seni & kerajinan...", send: "Kirim" },
+    tr: { title: "🦚 El Sanatları Asistanı", placeholder: "Sanat ve El Sanatları hakkında sor...", send: "Gönder" },
+    ta: { title: "🦚 கைவினை உதவியாளர்", placeholder: "கலை & கைவினை பற்றி கேளுங்கள்...", send: "அனுப்பு" }
+  };
+
+  // ---------- Suggestions list (add more crafts as you like) ----------
+  const suggestions = [
+    "Kondapalli dolls",
+    "Madhubani painting",
+    "Warli art",
+    "Phad painting",
+    "Blue pottery",
+    "Pattachitra",
+    "Channapatna toys",
+    "Kalamkari",
+    "Block printing",
+    "Terracotta craft"
+  ];
+
+  // ---------- State variables ----------
+  let lastBotReply = "";
+  let lastFollowupText = "";   // follow-up question extracted from the bot reply (in chosen language)
+  let lastTopic = "";          // last non-command user message (used when user asks "history" alone etc.)
+
+  // populate suggestion bar
+  const suggestionsBar = document.getElementById("suggestionsBar");
+  suggestions.forEach(s => {
+    const pill = document.createElement("button");
+    pill.className = "suggestion-pill";
+    pill.innerText = s;
+    pill.onclick = () => {
+      document.getElementById("userInput").value = s;
+      // give a tiny delay to show the text before sending
+      setTimeout(() => sendMessage(), 120);
+    };
+    suggestionsBar.appendChild(pill);
+  });
+
+  function updateLanguage() {
+    const lang = document.getElementById("languageSelect").value;
+    document.getElementById("title").innerText = translations[lang].title;
+    document.getElementById("userInput").placeholder = translations[lang].placeholder;
+    document.getElementById("sendBtn").innerText = translations[lang].send;
+  }
+
+  function typeEffect(element, text, speed = 24) {
+    let i = 0;
+    element.innerHTML = ""; // clear before typing
+    function typing() {
+      if (i < text.length) {
+        element.innerHTML += text.charAt(i);
+        i++;
+        element.scrollIntoView({block: "nearest"});
+        setTimeout(typing, speed);
+      }
+    }
+    typing();
+  }
+
+  function speakText(text) {
+    const langCode = document.querySelector("#languageSelect option:checked").dataset.lang;
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = langCode;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(speech);
+  }
+
+  function playVoice() {
+    if (lastBotReply) {
+      speakText(stripHtml(lastBotReply)); // speak only plain text
+    } else {
+      alert("No message to speak yet!");
+    }
+  }
+
+  function stripHtml(html) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  }
+
+  // detect if a message is a single keyword command
+  const sectionKeywords = {
+    "history": "📜 History",
+    "labour": "👷 Labour Needed",
+    "time": "⏳ Time to Make",
+    "facts": "🌟 Unique Facts",
+    "follow-up": "🤔 Follow-up",
+    "followup": "🤔 Follow-up"
+  };
+
+  async function sendMessage() {
+    let input = document.getElementById("userInput");
+    let rawMessage = input.value.trim();
+    if (!rawMessage) return;
+
+    const langSelected = document.getElementById("languageSelect").value;
+
+    // Display user's message (original text they typed)
+    let chatbox = document.getElementById("chatbox");
+    let userMsg = document.createElement("div");
+    userMsg.className = "message user";
+    userMsg.innerHTML = `<div>${escapeHtml(rawMessage)}</div>`;
+    chatbox.appendChild(userMsg);
+    chatbox.scrollTop = chatbox.scrollHeight;
+
+    // Determine what to actually send to server:
+    let messageToSend = rawMessage;
+    const lower = rawMessage.toLowerCase();
+
+    // If user typed a single keyword command (history, labour, time, facts...), request only that section.
+    if (Object.keys(sectionKeywords).includes(lower)) {
+      if (lastTopic) {
+        // Request only that section for the last topic
+        messageToSend = `Please respond ONLY with the section "${sectionKeywords[lower]}" for the topic: "${lastTopic}". Return clean HTML format as you normally would.`;
+      } else {
+        // No previous topic — ask for clarification
+        messageToSend = `Please respond ONLY with the section "${sectionKeywords[lower]}". If you need a topic, ask a clarifying question.`;
+      }
+    } else if (lower === "yes" || lower === "y") {
+      // If user says "yes" and a follow-up exists, send the follow-up text to be answered.
+      if (lastFollowupText) {
+        messageToSend = lastFollowupText;
+      } else {
+        // no followup: keep "yes" as is (server can handle it)
+        messageToSend = rawMessage;
+      }
+    } else {
+      // Normal message: update lastTopic if it looks like a real topic (not tiny)
+      if (rawMessage.length > 2 && rawMessage.split(" ").length <= 6) {
+        // treat short phrases (<=6 words) as possible topic
+        lastTopic = rawMessage;
+      } else if (rawMessage.length > 6) {
+        // longer messages also may define a topic; store first 6 words as a summary
+        lastTopic = rawMessage;
+      }
+      // messageToSend remains the raw user message
+    }
+
+    // clear input
+    input.value = "";
+
+    // Send to backend
+    try {
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messageToSend,
+          lang: langSelected
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Server returned " + response.status);
+      }
+
+      const data = await response.json();
+
+      // data.reply contains the HTML-formatted response from your model (as you instructed in system prompt).
+      const replyHtml = data.reply || "";
+
+      // Save the raw bot reply for speech / debugging
+      lastBotReply = replyHtml;
+
+      // parse replyHtml and separate follow-up block (if any)
+      let mainHtml = replyHtml;
+      let followupHtml = "";
+
+      // Try to split on the Follow-up section (model uses "<b>🤔 Follow-up:</b>" per prompt)
+      // We'll look for the 'Follow-up' marker (case-insensitive)
+      const followupMarkerRegex = /<b[^>]*>\s*.*?Follow-?up\s*:?\s*<\/b>/i;
+      const splitIndex = replyHtml.search(followupMarkerRegex);
+      if (splitIndex !== -1) {
+        // separate at the marker
+        const before = replyHtml.slice(0, splitIndex);
+        const after = replyHtml.slice(splitIndex);
+        // remove the <b>Follow-up</b> tag from after and keep the text that follows it
+        const afterRemovedMarker = after.replace(followupMarkerRegex, "");
+        mainHtml = before.trim();
+        followupHtml = afterRemovedMarker.trim();
+      } else {
+        // fallback: if no <b>Follow-up</b> found, try to detect the last sentence that ends with a '?' and treat it as follow-up
+        const textOnly = stripHtml(replyHtml);
+        const sentences = textOnly.split(/(?<=[.?!])\s+/);
+        if (sentences.length > 1) {
+          const last = sentences[sentences.length - 1];
+          if (last.trim().endsWith("?")) {
+            // build simple followup HTML
+            followupHtml = last.trim();
+            // remove the last sentence from mainHtml (best-effort)
+            const mainText = sentences.slice(0, sentences.length - 1).join(" ");
+            mainHtml = escapeHtml(mainText).replace(/\n/g, "<br>");
+          }
+        }
+      }
+
+      // If model returned nothing in mainHtml (rare), use the reply as main
+      if (!mainHtml) mainHtml = replyHtml;
+
+      // Create bot bubble for main content (use innerHTML because model returns HTML sections)
+      let botMsg = document.createElement("div");
+      botMsg.className = "message bot";
+      // wrap main HTML in a container for styling and safe insertion
+      botMsg.innerHTML = `<div class="main-content">${mainHtml}</div>`;
+      chatbox.appendChild(botMsg);
+
+      // If there's follow-up content, render it in its own clickable bubble
+      lastFollowupText = ""; // reset
+      if (followupHtml) {
+        // normalize followupHtml to plain text (but preserve basic HTML if present)
+        // We'll display it in a separate bubble; clicking the bubble will auto-send it as a user's "Yes" action.
+        let followupBubble = document.createElement("div");
+        followupBubble.className = "message bot followup";
+        // show followup as plain text inside the bubble (strip tags for clarity)
+        const followupPlain = stripHtml(followupHtml).trim();
+        followupBubble.innerHTML = `<div>${escapeHtml(followupPlain)}</div>`;
+        // store follow-up text (in the selected language) so if user clicks "Yes" or types "yes" we can send this.
+        lastFollowupText = followupPlain;
+        // clicking the followup bubble will copy it into the input and auto-send (confirming interest)
+        followupBubble.onclick = () => {
+          // show the followup in the input and send it directly as an affirmative action
+          document.getElementById("userInput").value = "yes";
+          // small delay to let the UI update
+          setTimeout(() => sendMessage(), 120);
+        };
+        chatbox.appendChild(followupBubble);
+      }
+
+      // update scroll
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+    } catch (err) {
+     let botMsg = document.createElement("div");
+botMsg.className = "message bot";
+botMsg.innerHTML = `<div></div>`;
+chatbox.appendChild(botMsg);
+
+let textDiv = botMsg.querySelector("div");
+typeEffect(textDiv, data.reply);
+
+// store bot reply
+lastBotReply = data.reply;
+
+// ✅ detect if reply contains a follow-up
+if (data.reply.includes("🤔")) {
+  let followUpContainer = document.createElement("div");
+  followUpContainer.className = "message bot";
+  followUpContainer.style.background = "#fff7d6";
+  followUpContainer.style.display = "flex";
+  followUpContainer.style.gap = "10px";
+  followUpContainer.style.justifyContent = "flex-start";
+  followUpContainer.style.padding = "8px 12px";
+  followUpContainer.style.borderRadius = "12px";
+
+  let yesBtn = document.createElement("button");
+  yesBtn.innerText = "Yes";
+  yesBtn.style.padding = "6px 12px";
+  yesBtn.style.borderRadius = "10px";
+  yesBtn.style.border = "none";
+  yesBtn.style.cursor = "pointer";
+  yesBtn.style.background = "#d4fc79";
+  yesBtn.onclick = () => {
+    document.getElementById("userInput").value = "Yes";
+    sendMessage();
+  };
+
+  let noBtn = document.createElement("button");
+  noBtn.innerText = "No";
+  noBtn.style.padding = "6px 12px";
+  noBtn.style.borderRadius = "10px";
+  noBtn.style.border = "none";
+  noBtn.style.cursor = "pointer";
+  noBtn.style.background = "#ff9a9e";
+  noBtn.onclick = () => {
+    document.getElementById("userInput").value = "No";
+    sendMessage();
+  };
+
+  followUpContainer.appendChild(yesBtn);
+  followUpContainer.appendChild(noBtn);
+  chatbox.appendChild(followUpContainer);
+}
+
+    }
+  }
+
+  // Start speech recognition
+  function startListening() {
+    const langCode = document.querySelector("#languageSelect option:checked").dataset.lang;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      alert("Speech recognition API not supported in this browser.");
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = langCode;
+    recognition.start();
+
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      document.getElementById("userInput").value = transcript;
+      sendMessage();
+    };
+
+    recognition.onerror = function(e) {
+      console.log("Speech recognition error", e);
+    };
+  }
+
+  // small helper to escape user text placed into HTML
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // initialize language labels & selection
+  updateLanguage();
+  </script>
+  
+</body>
+</html>   

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Icon</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: #ffffff; /* White background */
+      display: flex;
+      justify-content: flex-start; /* align items left */
+      align-items: flex-end;       /* align items bottom */
+      overflow: hidden;
+    }
+
+    /* Floating chatbot icon */
+    #chatbot-icon {
+      margin: 20px; /* distance from bottom-left corner */
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      z-index: 9999;
+      animation: floatBot 3s ease-in-out infinite;
+    }
+
+    #chatbot-icon img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.3s;
+    }
+
+    #chatbot-icon img:hover {
+      transform: scale(1.1);
+    }
+
+    /* Smooth floating animation */
+    @keyframes floatBot {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-12px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating chatbot icon that opens chatbot UI in new tab -->
+  <a href="{{ url_for('icon') }}" target="_blank" id="chatbot-icon">
+    <img src="{{ url_for('static', filename='bot.jpg') }}" alt="Chatbot" />
+  </a>
+
+</body>
+</html>
